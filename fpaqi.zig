@@ -187,12 +187,12 @@ fn compress(rfd: i32, wfd: i32, size: u32) !void {
 
 fn decompress(rfd: i32, wfd: i32) !void {
 
-    // fetch original file size first
     var buf: [1]u8 = .{0};
     var size: u32 = 0;
     var k: isize = 0;
     var j: isize = 0;
 
+    // fetch original file size first
     while (j < 4) : (j += 1) {
         _ = try os.read(rfd, buf[0..]);
         size = (size << 8) | buf[0];
