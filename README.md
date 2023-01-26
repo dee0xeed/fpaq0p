@@ -6,5 +6,5 @@ An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entrop
 
 # fpaqi
 
-Same encoder/decoder, but with alternative model.
+Same encoder/decoder, but with different model.
 See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor)
