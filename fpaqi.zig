@@ -187,7 +187,7 @@ fn compress(rfd: i32, wfd: i32, size: u32) !void {
 
 fn decompress(rfd: i32, wfd: i32) !void {
 
-    // read original file size first
+    // fetch original file size first
     var buf: [1]u8 = .{0};
     var size: u32 = 0;
     var k: isize = 0;
