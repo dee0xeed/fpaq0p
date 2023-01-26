@@ -161,11 +161,11 @@ fn decompress(rfd: i32, wfd: i32) !void {
     try c.begin();
 
     while (true) {
-    
+
         var bit: u1 = try c.decode();
         if (1 == bit)
             break;
-    
+
         var byte: u8 = 0;
         var k: usize = 0;
 
