@@ -15,7 +15,7 @@ const Model = struct {
     fn init() Model {
         var m = Model{};
         var k: usize = 0;
-        while (k < 512) : (k += 1) {
+        while (k < m.p1.len) : (k += 1) {
             m.p1[k] = P1MAX / 2;
         }
         return m;

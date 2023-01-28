@@ -25,7 +25,7 @@ const Model = struct {
     fn init() Model {
         var m = Model{};
         var k: usize = 0;
-        while (k < 8 * 256) : (k += 1) {
+        while (k < m.p0.len) : (k += 1) {
             m.p0[k] = P0MAX / 2;
         }
         return m;
