@@ -34,7 +34,7 @@ cunterbury-corpus
   38240 sum           12924  20754  21322  19180  19218  20735
    4227 xargs.1        1756   2675   2821   2567   2814   3070
 ```
-# mixing bswi08, bswi16 and bswi16
+# mixing bswi08, bswi12 and bswi16
 
 ```
 cunterbury-corpus
