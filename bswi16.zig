@@ -9,12 +9,13 @@ const Model = struct {
     const P0MAX = 1 << NBITS;
     const DS = 4; 
 
-    const ORDER = 12; // length of context in bits
-    const TBLEN = 8 * (1 << ORDER);
-    // context (sliding window 12 bits wide)
-    cx: u12 = 0,
+    const ORDER = 16; // length of context in bits
+    const TBLEN = 16 * (1 << ORDER);
+
+    // context (sliding window 16 bits wide)
+    cx: u16 = 0,
     // position of a bit in a BYTE, cyclically 0..7
-    ix: u16 = 0,
+    ix: u32 = 0,
 
     // probabilities of zero (scaled to 0..4096) for given ix and cx
     // index of this array is calculated as `(ix << ORDER) | cx`
@@ -31,13 +32,13 @@ const Model = struct {
 
     // returns probability of '0' for given bit position (ix) and context (cx)
     fn getP0(self: *Model) u16 {
-        const i: u16 = (self.ix << ORDER) | self.cx;
+        const i: u32 = (self.ix << ORDER) | self.cx;
         return self.p0[i];
     }
 
     fn update(self: *Model, bit: u1) void {
         var delta: u16 = 0;
-        const i: u16 = (self.ix << ORDER) | self.cx;
+        const i: u32 = (self.ix << ORDER) | self.cx;
         if (0 == bit) {
             delta = (P0MAX - self.p0[i]) >> DS;
             self.p0[i] += delta;
@@ -46,7 +47,7 @@ const Model = struct {
             self.p0[i] -= delta;
         }
         self.cx = (self.cx << 1) | bit;
-        self.ix = (self.ix + 1) & 0x0007;
+        self.ix = (self.ix + 1) & 0x0000_0007;
     }
 };
 
@@ -171,6 +172,7 @@ fn compress(rfd: i32, wfd: i32, size: u32) !void {
     while (k < size) : (k += 1) {
 
         _ = try os.read(rfd, buf[0..1]);
+        // std.debug.print("{X:0>2}", .{buf[0]});
 
         j = 0;
         byte = buf[0];
@@ -253,6 +255,7 @@ pub fn main() !void {
     var ts1: os.timespec = undefined;
     try os.clock_gettime(os.CLOCK.REALTIME, &ts1);
 
+    std.debug.print("1\n", .{});
     switch (mode[0]) {
         'c' => try compress(rfd, wfd, rsize),
         'd' => try decompress(rfd, wfd),
