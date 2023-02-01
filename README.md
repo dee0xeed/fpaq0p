@@ -1,3 +1,12 @@
+# compilation
+Compile all programs with `-O ReleaseFast`, for example
+
+```
+$ /opt/zig-0.10.1/zig build-exe bswi12.zig -fsingle-threaded -O ReleaseFast
+```
+
+See also [here](https://ziggit.dev/t/strange-program-performance-dependence/525)
+
 # fpaq0p
 An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entropy encoder in Zig.
 
@@ -8,7 +17,7 @@ An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entrop
 
 Same encoder/decoder, but with different model.
 In brief: Bit Sliding Window + posItion of a bit in a byte, hense the name.
-See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) for discussion.
+See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) for a discussion.
 
 ```
                         gzip fpaq0p bswi08 bswi12 bswi16
