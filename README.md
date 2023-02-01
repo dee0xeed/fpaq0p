@@ -19,7 +19,8 @@ Same encoder/decoder, but with different model.
 In brief: Bit Sliding Window + posItion of a bit in a byte, hense the name.
 See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) for a discussion.
 
-```(cunterbury-corpus)
+```cunterbury-corpus
+
                         gzip fpaq0p bswi08 bswi12 bswi16
  152089 alice29.txt   54435  87967  76636  66242  61882
  125179 asyoulik.txt  48951  75894  63217  55347  52835
@@ -35,7 +36,8 @@ See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) fo
 ```
 # mixing 
 
-```(cunterbury-corpus)
+```cunterbury-corpus
+
                        naive logist
  152089 alice29.txt    63430  56777
  125179 asyoulik.txt   53460  47096
