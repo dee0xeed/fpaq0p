@@ -21,7 +21,7 @@ See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) fo
 
 ```
 cunterbury-corpus
-                        gzip fpaq0p bswi08 bswi12 bswi16
+                       gzip fpaq0p bswi08 bswi12 bswi16
  152089 alice29.txt   54435  87967  76636  66242  61882
  125179 asyoulik.txt  48951  75894  63217  55347  52835
   24603 cp.html        7999  16335  14268  12739  12575
