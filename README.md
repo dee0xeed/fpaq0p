@@ -16,7 +16,7 @@ An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entrop
 # bswi*
 
 Same encoder/decoder, but with different model.
-In brief: Bit Sliding Window + posItion of a bit in a byte, hense the name.
+In brief: Bit Sliding Window + posItion of a bit in a byte, hence the name.
 See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) for a discussion.
 
 ```
