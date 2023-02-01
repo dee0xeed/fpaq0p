@@ -4,13 +4,13 @@ An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entrop
 # links
 [PAQ](http://mattmahoney.net/dc/)
 
-# fpaqi
+# bswi08
 
 Same encoder/decoder, but with different model.
 See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor)
 
 ```
-                        gzip  fpaq0p   fpaqi
+                        gzip  fpaq0p   bswi8
  152089 alice29.txt    54435   87967   76636
  125179 asyoulik.txt   48951   75894   63217
   24603 cp.html         7999   16335   14268
