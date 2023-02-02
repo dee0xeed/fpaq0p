@@ -50,20 +50,20 @@ const Model = struct {
 
         k = 0;
         while (k < m.s1.len) : (k += 1) {
-            m.s1[k].n0 = 1;
-            m.s1[k].n1 = 1;
+            m.s1[k].n0 = 0;
+            m.s1[k].n1 = 0;
         }
 
         k = 0;
         while (k < m.s2.len) : (k += 1) {
-            m.s2[k].n0 = 1;
-            m.s2[k].n1 = 1;
+            m.s2[k].n0 = 0;
+            m.s2[k].n1 = 0;
         }
 
         k = 0;
         while (k < m.s3.len) : (k += 1) {
-            m.s3[k].n0 = 1;
-            m.s3[k].n1 = 1;
+            m.s3[k].n0 = 0;
+            m.s3[k].n1 = 0;
         }
 
         return m;
