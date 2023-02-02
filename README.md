@@ -39,15 +39,15 @@ cunterbury-corpus
 ```
 cunterbury-corpus
                        naive logist
- 152089 alice29.txt    63430  56777
- 125179 asyoulik.txt   53460  47096
-  24603 cp.html        12283   9471
-  11150 fields.c        5560   4041
-   3721 grammar.lsp     2101   1499
-1029744 kennedy.xls   230530 260940
- 426754 lcet10.txt    175868 161412
- 481861 plrabn12.txt  197605 181023
- 513216 ptt5           56343  54659
-  38240 sum            18637  16218
-   4227 xargs.1         2725   1942
+ 152089 alice29.txt    63430  55862
+ 125179 asyoulik.txt   53460  46260
+  24603 cp.html        12283   9244
+  11150 fields.c        5560   3818
+   3721 grammar.lsp     2101   1390
+1029744 kennedy.xls   230530 259098
+ 426754 lcet10.txt    175868 159694
+ 481861 plrabn12.txt  197605 179807
+ 513216 ptt5           56343  53493
+  38240 sum            18637  15563
+   4227 xargs.1         2725   1851
 ```
