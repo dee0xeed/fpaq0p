@@ -22,6 +22,7 @@ pub const Encoder = struct {
         const xm = self.xl + ((self.xr - self.xl) >> Model.NBITS) * self.model.getP0();
 
         // left/lower part of the interval corresponds to zero
+
         if (0 == bit) {
             self.xr = xm;
         } else {

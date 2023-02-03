@@ -57,8 +57,8 @@ const Model04 = struct {
 
 fn compress(rfd: i32, wfd: i32, size: u32) !void {
 
-    var m = Model04.init();
-    var encoder = Encoder.init(&m.base, wfd);
+    var model = Model04.init();
+    var encoder = Encoder.init(&model.base, wfd);
     var byte: u8 = 0;
     var k: usize = 0;
     var j: usize = 0;
