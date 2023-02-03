@@ -51,3 +51,6 @@ cunterbury-corpus
   38240 sum            18637  15563
    4227 xargs.1         2725   1851
 ```
+
+## links
+[BitCompressor](https://github.com/GotthardtZ/BitCompressor)

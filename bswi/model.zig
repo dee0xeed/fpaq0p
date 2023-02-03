@@ -8,14 +8,6 @@ pub const Model = struct {
     // 4 seems to be better in most cases (than 5)
     pub const DS = 4; 
 
-    // position of a bit in a byte, cyclically 0..7
-    ix: u8 = 0,
-    // context (sliding 4 bits)
-    cx: u4 = 0,
-    // probabilities of zero for given ix and cx
-    // index of this array is calculated as `(ix << 4) | cx`
-    p0: [8 * 16]u16 = undefined,
-
     getP0Impl: *const fn(self: *Model) u16,
     updateImpl: *const fn(self: *Model, bit: u1) void,
 

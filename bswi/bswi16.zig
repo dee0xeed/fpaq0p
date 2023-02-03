@@ -6,65 +6,12 @@ const Allocator = mem.Allocator;
 
 const Encoder = @import("encoder.zig").Encoder;
 const Decoder = @import("decoder.zig").Decoder;
-const Model = @import("model.zig").Model;
-
-const Model16 = struct {
-
-    const ORDER = 16; // length of context in bits
-    const TBLEN = 16 * (1 << ORDER);
-
-    base: Model = undefined,
-    // context (sliding window 16 bits wide)
-    cx: u16 = 0,
-    // position of a bit in a BYTE, cyclically 0..7
-    ix: u32 = 0,
-
-    // probabilities of zero (scaled to 0..4096) for given ix and cx
-    // index of this array is calculated as `(ix << ORDER) | cx`
-    p0: []u16 = undefined,
-
-    fn init(a: Allocator) !Model16 {
-        var model = Model16 {
-            .base = Model {
-                .getP0Impl = getP0,
-                .updateImpl = update,
-            },
-        };
-        model.p0 = try a.alloc(u16, TBLEN);
-        var k: usize = 0;
-        while (k < model.p0.len) : (k += 1) {
-            model.p0[k] = Model.P0MAX / 2;
-        }
-        return model;
-    }
-
-    // returns probability of '0' for given bit position (ix) and context (cx)
-    fn getP0(base: *Model) u16 {
-        const self = @fieldParentPtr(Model16, "base", base);
-        const i: u32 = (self.ix << ORDER) | self.cx;
-        return self.p0[i];
-    }
-
-    fn update(base: *Model, bit: u1) void {
-        var self = @fieldParentPtr(Model16, "base", base);
-        var delta: u16 = 0;
-        const i: u32 = (self.ix << ORDER) | self.cx;
-        if (0 == bit) {
-            delta = ( Model.P0MAX - self.p0[i]) >>  Model.DS;
-            self.p0[i] += delta;
-        } else {
-            delta = self.p0[i] >>  Model.DS;
-            self.p0[i] -= delta;
-        }
-        self.cx = (self.cx << 1) | bit;
-        self.ix = (self.ix + 1) & 0x0000_0007;
-    }
-};
+const Model = @import("bswi-model.zig").Model;
 
 fn compress(rfd: i32, wfd: i32, size: u32, a: Allocator) !void {
 
-    var model = try Model16.init(a);
-    var encoder = Encoder.init(&model.base, wfd);
+    var model = try Model.init(16, a);
+    var encoder = Encoder.init(&model, wfd);
     var byte: u8 = 0;
     var k: usize = 0;
     var j: usize = 0;
@@ -108,8 +55,8 @@ fn decompress(rfd: i32, wfd: i32, a: Allocator) !void {
         size = (size << 8) | buf[0];
     }
 
-    var model = try Model16.init(a);
-    var decoder = try Decoder.init(&model.base, rfd);
+    var model = try Model.init(16, a);
+    var decoder = try Decoder.init(&model, rfd);
 
     var bit: u1 = 0;
     var byte: u8 = 0;

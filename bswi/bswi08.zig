@@ -2,65 +2,16 @@
 const std = @import("std");
 const os = std.os;
 const mem = std.mem;
+const Allocator = mem.Allocator;
 
 const Encoder = @import("encoder.zig").Encoder;
 const Decoder = @import("decoder.zig").Decoder;
-const Model = @import("model.zig").Model;
+const Model = @import("bswi-model.zig").Model;
 
-const Model08 = struct {
+fn compress(rfd: i32, wfd: i32, size: u32, a: Allocator) !void {
 
-    base: Model = undefined,
-    // position of a bit in a byte, cyclically 0..7
-    ix: u16 = 0,
-    // context (sliding byte)
-    cx: u8 = 0,
-    // probabilities (scaled to 0..4096) of zero for given ix and cx
-    // index of this array is calculated as `(ix << 8) | cx`
-    p0: [8 * 256]u16 = undefined,
-
-    fn init() Model08 {
-        var model = Model08 {
-            .base = Model {
-                .getP0Impl = getP0,
-                .updateImpl = update,
-            },
-        };
-        var k: usize = 0;
-        while (k < model.p0.len) : (k += 1) {
-            model.p0[k] = Model.P0MAX / 2;
-        }
-        return model;
-    }
-
-    // returns probability of '0' for given bit position (ix) and context (cx)
-    fn getP0(base: *Model) u16 {
-        var self = @fieldParentPtr(Model08, "base", base);
-        const i: u16 = (self.ix << 8) | self.cx;
-        return self.p0[i];
-    }
-
-    fn update(base: *Model, bit: u1) void {
-
-        var self = @fieldParentPtr(Model08, "base", base);
-        var delta: u16 = 0;
-        const i: u16 = (self.ix << 8) | self.cx;
-
-        if (0 == bit) {
-            delta = (Model.P0MAX - self.p0[i]) >> Model.DS;
-            self.p0[i] += delta;
-        } else {
-            delta = self.p0[i] >> Model.DS;
-            self.p0[i] -= delta;
-        }
-        self.cx = (self.cx << 1) | bit;
-        self.ix = (self.ix + 1) & 0x0007;
-    }
-};
-
-fn compress(rfd: i32, wfd: i32, size: u32) !void {
-
-    var model = Model08.init();
-    var encoder = Encoder.init(&model.base, wfd);
+    var model = try Model.init(8, a);
+    var encoder = Encoder.init(&model, wfd);
     var byte: u8 = 0;
     var k: usize = 0;
     var j: usize = 0;
@@ -91,7 +42,7 @@ fn compress(rfd: i32, wfd: i32, size: u32) !void {
     try encoder.foldup();
 }
 
-fn decompress(rfd: i32, wfd: i32) !void {
+fn decompress(rfd: i32, wfd: i32, a: Allocator) !void {
 
     var buf: [1]u8 = .{0};
     var size: u32 = 0;
@@ -104,8 +55,8 @@ fn decompress(rfd: i32, wfd: i32) !void {
         size = (size << 8) | buf[0];
     }
 
-    var model = Model08.init();
-    var decoder = try Decoder.init(&model.base, rfd);
+    var model = try Model.init(8, a);
+    var decoder = try Decoder.init(&model, rfd);
 
     var bit: u1 = 0;
     var byte: u8 = 0;
@@ -161,9 +112,12 @@ pub fn main() !void {
     var ts1: os.timespec = undefined;
     try os.clock_gettime(os.CLOCK.REALTIME, &ts1);
 
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
     switch (mode[0]) {
-        'c' => try compress(rfd, wfd, rsize),
-        'd' => try decompress(rfd, wfd),
+        'c' => try compress(rfd, wfd, rsize, allocator),
+        'd' => try decompress(rfd, wfd, allocator),
         else => unreachable,
     }
 

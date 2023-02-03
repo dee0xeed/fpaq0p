@@ -1,7 +1,7 @@
 
 const std = @import("std");
 const os = std.os;
-const Model = @import("model.zig").Model;
+const Model = @import("bswi-model.zig").Model;
 
 pub const Decoder = struct {
 
