@@ -3,47 +3,51 @@ const std = @import("std");
 const os = std.os;
 const mem = std.mem;
 
-const Model = struct {
+const Encoder = @import("encoder.zig").Encoder;
+const Decoder = @import("decoder.zig").Decoder;
+const Model = @import("model.zig").Model;
 
-    const NBITS = 12;
-    const P0MAX = 1 << NBITS;
+const Model04 = struct {
 
-    // 3 - bigger delta_p0, faster adaptation; 6 - smaller delta_p0, slower adaptation
-    // 4 seems to be better in most cases (than 5)
-    const DS = 4; 
-
+    base: Model = undefined,
     // position of a bit in a byte, cyclically 0..7
     ix: u8 = 0,
     // context (sliding 4 bits)
     cx: u4 = 0,
-
     // probabilities of zero for given ix and cx
     // index of this array is calculated as `(ix << 4) | cx`
     p0: [8 * 16]u16 = undefined,
 
-    fn init() Model {
-        var m = Model{};
+    fn init() Model04 {
+        var model = Model04 {
+            .base = Model {
+                .getP0Impl = getP0,
+                .updateImpl = update,
+            },
+        };
         var k: usize = 0;
-        while (k < m.p0.len) : (k += 1) {
-            m.p0[k] = P0MAX / 2;
+        while (k < model.p0.len) : (k += 1) {
+            model.p0[k] = Model.P0MAX / 2;
         }
-        return m;
+        return model;
     }
 
     // returns probability of '0' for given bit position (ix) and context (cx)
-    fn getP0(self: *Model) u16 {
+    pub fn getP0(base: *Model) u16 {
+        var self = @fieldParentPtr(Model04, "base", base);
         const i: u16 = (self.ix << 4) | self.cx;
         return self.p0[i];
     }
 
-    fn update(self: *Model, bit: u1) void {
+    pub fn update(base: *Model, bit: u1) void {
+        var self = @fieldParentPtr(Model04, "base", base);
         var delta: u16 = 0;
         const i: u16 = (self.ix << 4) | self.cx;
         if (0 == bit) {
-            delta = (P0MAX - self.p0[i]) >> DS;
+            delta = (Model.P0MAX - self.p0[i]) >> Model.DS;
             self.p0[i] += delta;
         } else {
-            delta = self.p0[i] >> DS;
+            delta = self.p0[i] >> Model.DS;
             self.p0[i] -= delta;
         }
         self.cx = (self.cx << 1) | bit;
@@ -51,109 +55,10 @@ const Model = struct {
     }
 };
 
-const Encoder = struct {
-
-    model: *Model,
-    xl: u32 = 0,
-    xr: u32 = 0xFFFF_FFFF,
-    fd: i32,
-
-    fn init(m: *Model, fd: i32) Encoder {
-        return Encoder {
-            .model = m,
-            .fd = fd,
-        };
-    }
-
-    fn encode(self: *Encoder, bit: u1) !void {
-
-        const xm = self.xl + ((self.xr - self.xl) >> Model.NBITS) * self.model.getP0();
-
-        // left/lower part of the interval corresponds to zero
-        if (0 == bit) {
-            self.xr = xm;
-        } else {
-            self.xl = xm + 1;
-        }
-
-        self.model.update(bit);
-
-        while (0 == ((self.xl ^ self.xr) & 0xFF00_0000)) {
-            var b: [1]u8 = .{@intCast(u8, self.xr >> 24)};
-            _ = try os.write(self.fd, b[0..]);
-            self.xl <<= 8;
-            self.xr = (self.xr << 8) | 0x0000_00FF;
-        }
-    }
-
-    fn foldup(self: *Encoder) !void {
-        var b: [1]u8 = .{@intCast(u8, self.xr >> 24)};
-        _ = try os.write(self.fd, b[0..]);
-    }
-};
-
-const Decoder = struct {
-
-    model: *Model,
-    fd: i32,
-    xl: u32 = 0,
-    xr: u32 = 0xFFFF_FFFF,
-     x: u32 = 0,
-
-    fn init(m: *Model, fd: i32) !Decoder {
-
-        var d = Decoder {
-            .model = m,
-            .fd = fd,
-        };
-
-        var b: [1]u8 = undefined;
-        var k: usize = 0;
-
-        while (k < 4) : (k += 1) {
-            var byte: u8 = undefined;
-            var r = try os.read(d.fd, b[0..]);
-            byte = b[0];
-            if (0 == r) byte = 0;
-            d.x = (d.x << 8) | byte;
-        }
-        return d;
-    }
-
-    fn decode(self: *Decoder) !u1 {
-
-        const xm = self.xl + ((self.xr - self.xl) >> Model.NBITS) * self.model.getP0();
-        var bit: u1 = 1;
-        if (self.x <= xm) {
-            bit = 0;
-            self.xr = xm;
-        } else {
-            self.xl = xm + 1;
-        }
-
-        self.model.update(bit);
-
-        while (0 == ((self.xl ^ self.xr) & 0xFF00_0000)) {
-
-            self.xl <<= 8;
-            self.xr = (self.xr << 8) | 0x0000_00FF;
-
-            var b: [1]u8 = undefined;
-            var byte: u8 = undefined;
-            var r = try os.read(self.fd, b[0..]);
-            byte = b[0];
-            if (0 == r) byte = 0;
-            self.x = (self.x << 8) | byte;
-        }
-
-        return bit;
-    }
-};
-
 fn compress(rfd: i32, wfd: i32, size: u32) !void {
 
-    var m = Model.init();
-    var e = Encoder.init(&m, wfd);
+    var m = Model04.init();
+    var encoder = Encoder.init(&m.base, wfd);
     var byte: u8 = 0;
     var k: usize = 0;
     var j: usize = 0;
@@ -177,11 +82,11 @@ fn compress(rfd: i32, wfd: i32, size: u32) !void {
         byte = buf[0];
         while (j < 8) : (j += 1) {
             bit = @intCast(u1, byte & 0b0000_0001);
-            try e.encode(bit);
+            try encoder.take(bit);
             byte >>= 1;
         }
     }
-    try e.foldup();
+    try encoder.foldup();
 }
 
 fn decompress(rfd: i32, wfd: i32) !void {
@@ -197,8 +102,8 @@ fn decompress(rfd: i32, wfd: i32) !void {
         size = (size << 8) | buf[0];
     }
 
-    var m = Model.init();
-    var d = try Decoder.init(&m, rfd);
+    var m = Model04.init();
+    var decoder = try Decoder.init(&m.base, rfd);
 
     var bit: u1 = 0;
     var byte: u8 = 0;
@@ -209,7 +114,7 @@ fn decompress(rfd: i32, wfd: i32) !void {
         j = 0;
         byte = 0;
         while (j < 8) : (j += 1) {
-            bit = try d.decode();
+            bit = try decoder.give();
             bbb = bit;
             bbb <<= 7;
             byte = (byte >> 1) | bbb;

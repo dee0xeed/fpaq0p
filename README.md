@@ -10,7 +10,7 @@ See also [here](https://ziggit.dev/t/strange-program-performance-dependence/525)
 # fpaq0p
 An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entropy encoder in Zig.
 
-# links
+## links
 [PAQ](http://mattmahoney.net/dc/)
 
 # bswi*

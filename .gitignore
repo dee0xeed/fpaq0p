@@ -1,4 +1,5 @@
 fpaq0p
-fpaq0p.o
-fpaqi
-fpaqi.o
+*.o
+bswi04
+bswi12
+bswi16
