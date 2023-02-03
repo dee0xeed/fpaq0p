@@ -7,8 +7,9 @@ pub const Model = struct {
 
     pub const NBITS = 12;
     pub const P0MAX = 1 << NBITS;
+
     // 3 - bigger delta_p0, faster adaptation; 6 - smaller delta_p0, slower adaptation
-    // 4 seems to be better in most cases (than 5)
+    // 4 seems to be better in most cases (than 5 used in fpaq0)
     pub const DS = 4; 
     const IX_MASK = 0x0000_0007;
 
@@ -28,7 +29,6 @@ pub const Model = struct {
 
     pub fn init(order: u5, a: Allocator) !Model {
         var model = Model {.order = order};
-        model.order = order;
         model.cx_mask = (@as(u32, 1) << order) - 1;
         const table_len = 8 * (@as(u32, 1) << order);
         model.p0 = try a.alloc(u16, table_len);
