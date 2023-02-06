@@ -15,7 +15,17 @@ An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entrop
 
 # bswi*
 
-Same encoder/decoder, but with different model.
+## Encoder/Decoder
+
+Borrowed from `fpaq0p`, but with some modifications:
+
+* uses probability of zero instead of one
+* and left (lower) interval corresponds to probabilty of zero
+* bytes are processed from LSB to MSB
+* no extra bits between bytes (original file size is stored in a compressed file)
+
+## Probability model
+
 In brief: Bit Sliding Window + posItion of a bit in a byte, hence the name.
 See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) for a discussion.
 
@@ -34,7 +44,7 @@ cunterbury-corpus
   38240 sum           12924  20754  21322  19180  19218  20735
    4227 xargs.1        1756   2675   2821   2567   2814   3070
 ```
-# mixing bswi08, bswi12 and bswi16
+## mixing bswi08, bswi12 and bswi16
 
 ```
 cunterbury-corpus
