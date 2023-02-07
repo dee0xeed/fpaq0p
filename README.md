@@ -29,8 +29,31 @@ Borrowed from `fpaq0p`, but with some modifications:
 In brief: Bit Sliding Window + posItion of a bit in a byte, hence the name.
 See [here](https://encode.su/threads/4008-A-model-for-fpaq0p-like-compressor) for a discussion.
 
+### calgary-corpus
+
 ```
-cunterbury-corpus
+                fpaq0p bswi08 bswi12 bswi16
+111261  bib      73186  58206  56855  50838
+768771  book1   442501 398301 361306 345004
+610856  book2   360903 325904 298452 278986
+102400  geo      71658  59866  68662  61223
+377109  news    238373 215909 210622 192843
+ 21504  obj1     14288  12984  14934  13041
+246814  obj2    179311 137710 141174 115730
+ 53161  paper1   32522  29133  30562  26521
+ 82199  paper2   47961  43383  42469  38348
+ 46526  paper3   27510  25184  25987  23070
+ 13286  paper4    7882   7374   8912   7463
+ 11954  paper5    7383   6871   8381   6997
+ 38105  paper6   22962  20813  22804  19504
+513216  pic      67909  61034  63557  59489
+ 39611  progc    25273  21560  23884  20164
+ 71646  progl    40760  32855  33611  29016
+ 49379  progp    29410  23698  25448  21271
+ 93695  trans    60728  47709  47821  40308
+```
+### cunterbury-corpus
+```
                        gzip fpaq0p bswi04 bswi08 bswi12 bswi16
  152089 alice29.txt   54435  87967  94473  76636  66242  61882
  125179 asyoulik.txt  48951  75894  81465  63217  55347  52835
@@ -46,8 +69,32 @@ cunterbury-corpus
 ```
 ## mixing bswi08, bswi12 and bswi16
 
+### calgary-corpus
+
 ```
-cunterbury-corpus
+   bib  40292
+ book1 300266
+ book2 241826
+   geo  56726
+  news 167999
+  obj1  10881
+  obj2 104838
+paper1  21463
+paper2  31914
+paper3  19145
+paper4   5702
+paper5   5282
+paper6  15445
+   pic  53493
+ progc  15895
+ progl  23609
+ progp  16103
+ trans  31604
+```
+
+### cunterbury-corpus
+
+```
                        naive logist
  152089 alice29.txt    63430  55862
  125179 asyoulik.txt   53460  46260
