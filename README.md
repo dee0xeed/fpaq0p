@@ -111,3 +111,5 @@ paper6  15445
 
 ## links
 [BitCompressor](https://github.com/GotthardtZ/BitCompressor)
+[gallop](https://github.com/mitiko/gallop)
+[fpaq0 in Rust](https://github.com/aufdj/fpaq0-rs/blob/main/README.md)
