@@ -1,31 +1,36 @@
 
 const std = @import("std");
 const os = std.os;
+const fs = std.fs;
+const io = std.io;
+
 const Model = @import("bswi-model.zig").Model;
+const Reader = @import("buff-reader.zig").Reader;
 
 pub const Decoder = struct {
 
     model: *Model,
-    fd: i32,
+    file: *fs.File,
+    reader: * Reader,
+
     xl: u32 = 0,
     xr: u32 = 0xFFFF_FFFF,
      x: u32 = 0,
 
-    pub fn init(m: *Model, fd: i32) !Decoder {
+    pub fn init(m: *Model, f: *fs.File, r: *Reader) !Decoder {
 
         var d = Decoder {
             .model = m,
-            .fd = fd,
+            .file = f,
+            .reader = r,
         };
 
-        var b: [1]u8 = undefined;
+        var byte: u8 = undefined;
         var k: usize = 0;
 
         while (k < 4) : (k += 1) {
-            var byte: u8 = undefined;
-            var r = try os.read(d.fd, b[0..]);
-            byte = b[0];
-            if (0 == r) byte = 0;
+            byte = try r.give() orelse 0;
+            // if (null == byte) byte = 0;
             d.x = (d.x << 8) | byte;
         }
         return d;
@@ -49,11 +54,7 @@ pub const Decoder = struct {
             self.xl <<= 8;
             self.xr = (self.xr << 8) | 0x0000_00FF;
 
-            var b: [1]u8 = undefined;
-            var byte: u8 = undefined;
-            var r = try os.read(self.fd, b[0..]);
-            byte = b[0];
-            if (0 == r) byte = 0;
+            var byte = try self.reader.give() orelse 0;
             self.x = (self.x << 8) | byte;
         }
 

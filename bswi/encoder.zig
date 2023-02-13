@@ -1,20 +1,28 @@
 
 const std = @import("std");
 const os = std.os;
+const fs = std.fs;
+//const io = std.io;
+const mem = std.mem;
+const Allocator = mem.Allocator;
 const Model = @import("bswi-model.zig").Model;
+const Writer = @import("buff-writer.zig").Writer;
 
 pub const Encoder = struct {
 
     model: *Model,
+    file: *fs.File,
+    writer: *Writer,
     xl: u32 = 0,
     xr: u32 = 0xFFFF_FFFF,
-    fd: i32,
 
-    pub fn init(m: *Model, fd: i32) Encoder {
-        return Encoder {
+    pub fn init(m: *Model, f: *fs.File, w: *Writer) Encoder {
+        var self = Encoder {
             .model = m,
-            .fd = fd,
+            .file = f,
+            .writer = w,
         };
+        return self;
     }
 
     pub fn take(self: *Encoder, bit: u1) !void {
@@ -32,15 +40,16 @@ pub const Encoder = struct {
         self.model.update(bit);
 
         while (0 == ((self.xl ^ self.xr) & 0xFF00_0000)) {
-            var b: [1]u8 = .{@intCast(u8, self.xr >> 24)};
-            _ = try os.write(self.fd, b[0..]);
+            var byte = @intCast(u8, self.xr >> 24);
+            try self.writer.take(byte);
             self.xl <<= 8;
             self.xr = (self.xr << 8) | 0x0000_00FF;
         }
     }
 
     pub fn foldup(self: *Encoder) !void {
-        var b: [1]u8 = .{@intCast(u8, self.xr >> 24)};
-        _ = try os.write(self.fd, b[0..]);
+        var byte = @intCast(u8, self.xr >> 24);
+        try self.writer.take(byte);
+        try self.writer.flush();
     }
 };
