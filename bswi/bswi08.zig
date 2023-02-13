@@ -26,11 +26,11 @@ pub fn main() !void {
         return;
     }
 
-    const rfile = mem.sliceTo(os.argv[2], 0);
-    const wfile = mem.sliceTo(os.argv[3], 0);
-
     var ts1: os.timespec = undefined;
     try os.clock_gettime(os.CLOCK.REALTIME, &ts1);
+
+    const rfile = mem.sliceTo(os.argv[2], 0);
+    const wfile = mem.sliceTo(os.argv[3], 0);
 
     var path_buf: [fs.MAX_PATH_BYTES]u8 = undefined;
     const rpath = try fs.realpath(rfile, &path_buf);
