@@ -1,15 +1,73 @@
 
 const std = @import("std");
 const os = std.os;
+const fs = std.fs;
 const mem = std.mem;
 const Allocator = mem.Allocator;
+
+const Reader = struct {
+
+    file: *fs.File = undefined,
+    buff: []u8 = undefined,
+    bcnt: u32 = 0,
+    curr: u32 = 0,
+
+    fn init(f: *fs.File, s: u32, a: Allocator) !Reader {
+        var self = Reader{};
+        self.buff = try a.alloc(u8, s);
+        self.file = f;
+        return self;
+    }
+
+    fn give(self: *Reader) !?u8 {
+        if (0 == self.bcnt) {
+            self.bcnt = @intCast(u32, try self.file.read(self.buff[0..]));
+            if (0 == self.bcnt) return null;
+            self.curr = 0;
+        }
+        self.bcnt -= 1;
+        const byte = self.buff[self.curr];
+        self.curr += 1;
+        return byte;
+    }
+};
+
+const Writer = struct {
+
+    buff: []u8 = undefined,
+    bcnt: u32 = 0,
+    file: *fs.File = undefined,
+
+    fn init(f: *fs.File, s: u32, a: Allocator) !Writer {
+        var self = Writer{};
+        self.buff = try a.alloc(u8, s);
+        self.file = f;
+        return self;
+    }
+
+    fn take(self: *Writer, byte: u8) !void {
+        if (self.bcnt == self.buff.len) {
+            _ = try self.file.write(self.buff[0..]);
+            self.bcnt = 0;
+        }
+        self.buff[self.bcnt] = byte;
+        self.bcnt += 1;
+    }
+
+    fn flush(self: *Writer) !void {
+        if (self.bcnt > 0) {
+            _ = try self.file.write(self.buff[0..self.bcnt]);
+            self.bcnt = 0;
+        }
+    }
+};
 
 const Stat = struct {
     n0: usize = undefined,
     n1: usize = undefined,
 
     fn p0(self: *Stat) f64 {
-        return (@intToFloat(f64, self.n0) + 0.5) / (@intToFloat(f64, self.n0 + self.n1) + 1);
+        return (@intToFloat(f64, self.n0) + 0.5) / (@intToFloat(f64, self.n0 + self.n1) + 1.0);
     }
 };
 
@@ -26,11 +84,11 @@ const Model = struct {
 
     // probabilities of zero for given ix and cx[k]
     // index of this array is calculated as `(ix << 8) | cx1`
-    s1: []Stat = undefined, // [8 * (1 << 8)]Stat{},
+    s1: []Stat = undefined,
     // index of this array is calculated as `(ix << 12) | cx2`
-    s2: []Stat = undefined, //[8 * (1 << 12)]Stat{},
+    s2: []Stat = undefined,
     // index of this array is calculated as `(ix << 16) | cx3`
-    s3: []Stat = undefined, // [8 * (1 << 16)]Stat{},
+    s3: []Stat = undefined,
 
     w1: f64 = 0.0,
     w2: f64 = 0.0,
@@ -96,7 +154,6 @@ const Model = struct {
         self.px = f1 * ((self.w1 * self.d1) + (self.w2 * self.d2) + (self.w3 * self.d3));
         self.px = expit(self.px);
 
-        //std.debug.print("{}/{} {}/{} {}/{} -> {}\n", .{p0a, self.wt[0], p0b, self.wt[1], p0c, self.wt[2], p0});
         return @floatToInt(u16, 4096.0 * self.px);
     }
 
@@ -142,23 +199,27 @@ const Model = struct {
 const Encoder = struct {
 
     model: *Model,
+    file: *fs.File,
+    writer: *Writer,
     xl: u32 = 0,
     xr: u32 = 0xFFFF_FFFF,
-    fd: i32,
 
-    fn init(m: *Model, fd: i32) Encoder {
-        return Encoder {
+    fn init(m: *Model, f: *fs.File, w: *Writer) Encoder {
+        var self = Encoder {
             .model = m,
-            .fd = fd,
+            .file = f,
+            .writer = w,
         };
+        return self;
     }
 
-    fn encode(self: *Encoder, bit: u1) !void {
+    fn take(self: *Encoder, bit: u1) !void {
 
         const p0 = self.model.getP0();
         const xm = self.xl + ((self.xr - self.xl) >> Model.NBITS) * p0;
 
         // left/lower part of the interval corresponds to zero
+
         if (0 == bit) {
             self.xr = xm;
         } else {
@@ -168,51 +229,54 @@ const Encoder = struct {
         self.model.update(bit);
 
         while (0 == ((self.xl ^ self.xr) & 0xFF00_0000)) {
-            var b: [1]u8 = .{@intCast(u8, self.xr >> 24)};
-            _ = try os.write(self.fd, b[0..]);
+            var byte = @intCast(u8, self.xr >> 24);
+            try self.writer.take(byte);
             self.xl <<= 8;
             self.xr = (self.xr << 8) | 0x0000_00FF;
         }
     }
 
     fn foldup(self: *Encoder) !void {
-        var b: [1]u8 = .{@intCast(u8, self.xr >> 24)};
-        _ = try os.write(self.fd, b[0..]);
+        var byte = @intCast(u8, self.xr >> 24);
+        try self.writer.take(byte);
+        try self.writer.flush();
     }
 };
 
 const Decoder = struct {
 
     model: *Model,
-    fd: i32,
+    file: *fs.File,
+    reader: * Reader,
+
     xl: u32 = 0,
     xr: u32 = 0xFFFF_FFFF,
      x: u32 = 0,
 
-    fn init(m: *Model, fd: i32) !Decoder {
+    fn init(m: *Model, f: *fs.File, r: *Reader) !Decoder {
 
         var d = Decoder {
             .model = m,
-            .fd = fd,
+            .file = f,
+            .reader = r,
         };
 
-        var b: [1]u8 = undefined;
+        var byte: u8 = undefined;
         var k: usize = 0;
 
         while (k < 4) : (k += 1) {
-            var byte: u8 = undefined;
-            var r = try os.read(d.fd, b[0..]);
-            byte = b[0];
-            if (0 == r) byte = 0;
+            byte = try r.give() orelse 0;
+            // if (null == byte) byte = 0;
             d.x = (d.x << 8) | byte;
         }
         return d;
     }
 
-    fn decode(self: *Decoder) !u1 {
+    fn give(self: *Decoder) !u1 {
 
         const p0 = self.model.getP0();
         const xm = self.xl + ((self.xr - self.xl) >> Model.NBITS) * p0;
+
         var bit: u1 = 1;
         if (self.x <= xm) {
             bit = 0;
@@ -228,11 +292,7 @@ const Decoder = struct {
             self.xl <<= 8;
             self.xr = (self.xr << 8) | 0x0000_00FF;
 
-            var b: [1]u8 = undefined;
-            var byte: u8 = undefined;
-            var r = try os.read(self.fd, b[0..]);
-            byte = b[0];
-            if (0 == r) byte = 0;
+            var byte = try self.reader.give() orelse 0;
             self.x = (self.x << 8) | byte;
         }
 
@@ -240,14 +300,13 @@ const Decoder = struct {
     }
 };
 
-fn compress(rfd: i32, wfd: i32, size: u32, a: Allocator) !void {
+fn compress(rf: *fs.File, wf: *fs.File, size: u32, a: Allocator) !void {
 
-    var m = try Model.init(a);
-    var e = Encoder.init(&m, wfd);
-    var byte: u8 = 0;
     var k: usize = 0;
-    var j: usize = 0;
-    var bit: u1 = 0;
+    var reader = try Reader.init(rf, 4096, a);
+    var writer = try Writer.init(wf, 4096, a);
+    var model = try Model.init(a);
+    var encoder = Encoder.init(&model, wf, &writer);
 
     // store original file size first (BE)
     var buf: [4]u8 = .{
@@ -256,69 +315,63 @@ fn compress(rfd: i32, wfd: i32, size: u32, a: Allocator) !void {
         @intCast(u8, (size >>  8) & 0xFF),
         @intCast(u8, (size >>  0) & 0xFF),
     };
-    _ = try os.write(wfd, buf[0..]);
 
-    k = 0;
+    try writer.take(buf[0]);
+    try writer.take(buf[1]);
+    try writer.take(buf[2]);
+    try writer.take(buf[3]);
+
     while (k < size) : (k += 1) {
-
-        _ = try os.read(rfd, buf[0..1]);
-
-        j = 0;
-        byte = buf[0];
+        var byte = try reader.give() orelse unreachable;
+        var j: u8 = 0;
         while (j < 8) : (j += 1) {
-            bit = @intCast(u1, byte & 0b0000_0001);
-            try e.encode(bit);
+            var bit = @intCast(u1, byte & 0b0000_0001);
+            try encoder.take(bit);
             byte >>= 1;
         }
     }
-    try e.foldup();
-    std.debug.print("w0 = {} w1 = {} w2 = {}\n", .{m.w1, m.w2, m.w3});
+    try encoder.foldup();
+    std.debug.print("w0={d:.3} w1={d:.3} w2={d:.3}\n", .{model.w1, model.w2, model.w3});
 }
 
-fn decompress(rfd: i32, wfd: i32, a: Allocator) !void {
+pub fn decompress(rf: *fs.File, wf: *fs.File, a: Allocator) !void {
 
-    var buf: [1]u8 = .{0};
     var size: u32 = 0;
     var k: isize = 0;
     var j: isize = 0;
+    var byte: u8 = 0;
+
+    var reader = try Reader.init(rf, 4096, a);
+    var writer = try Writer.init(wf, 4096, a);
 
     // fetch original file size first
     while (j < 4) : (j += 1) {
-        _ = try os.read(rfd, buf[0..]);
-        size = (size << 8) | buf[0];
+        byte = try reader.give() orelse unreachable;
+        size = (size << 8) | byte;
     }
 
     var m = try Model.init(a);
-    var d = try Decoder.init(&m, rfd);
+    var decoder = try Decoder.init(&m, rf, &reader);
 
     var bit: u1 = 0;
-    var byte: u8 = 0;
     var bbb: u8 = 0;
-
     while (k < size) : (k += 1) {
-
         j = 0;
         byte = 0;
         while (j < 8) : (j += 1) {
-            bit = try d.decode();
+            bit = try decoder.give();
             bbb = bit;
             bbb <<= 7;
             byte = (byte >> 1) | bbb;
         }
-        buf = .{byte};
-        _ = try os.write(wfd, buf[0..]);
+        _ = try writer.take(byte);
     }
+    try writer.flush();
 }
 
 fn help(prog: []const u8) void {
     std.debug.print("Usage: {s} <cmd> <infile> <outfile>\n", .{prog});
     std.debug.print("  cmd: c to compress, d to decompress\n", .{});
-}
-
-fn fileSize(fd: i32) u32 {
-    const size = os.linux.lseek(fd, 0, os.SEEK.END);
-    _ = os.linux.lseek(fd, 0, os.SEEK.SET);
-    return @intCast(u32, size & 0xFFFF_FFFF);
 }
 
 pub fn main() !void {
@@ -335,22 +388,24 @@ pub fn main() !void {
         return;
     }
 
+    var ts1: os.timespec = undefined;
+    try os.clock_gettime(os.CLOCK.REALTIME, &ts1);
+
     const rfile = mem.sliceTo(os.argv[2], 0);
     const wfile = mem.sliceTo(os.argv[3], 0);
 
-    const rfd = try os.open(rfile, os.O.RDONLY, 0);
-    const wfd = try os.open(wfile, os.O.WRONLY | os.O.CREAT | os.O.TRUNC, 0o0664);
-    const rsize = fileSize(rfd);
-
-    var ts1: os.timespec = undefined;
-    try os.clock_gettime(os.CLOCK.REALTIME, &ts1);
+    var path_buf: [fs.MAX_PATH_BYTES]u8 = undefined;
+    const rpath = try fs.realpath(rfile, &path_buf);
+    var rf = try fs.openFileAbsolute(rpath, .{});
+    const rsize = (try rf.stat()).size;
+    var wf = try fs.cwd().createFile(wfile, .{});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
     switch (mode[0]) {
-        'c' => try compress(rfd, wfd, rsize, allocator),
-        'd' => try decompress(rfd, wfd, allocator),
+        'c' => try compress(&rf, &wf, @intCast(u32, rsize), allocator),
+        'd' => try decompress(&rf, &wf, allocator),
         else => unreachable,
     }
 
@@ -361,6 +416,6 @@ pub fn main() !void {
     const t2 = ts2.tv_sec * 1_000 + @divTrunc(ts2.tv_nsec, 1_000_000);
     const dt = t2 - t1;
 
-    const wsize = fileSize(wfd);
+    const wsize = (try wf.stat()).size;
     std.debug.print("{s} ({} bytes) -> {s} ({} bytes) in {} msec\n", .{rfile, rsize, wfile, wsize, dt});
 }

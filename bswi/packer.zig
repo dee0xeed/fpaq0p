@@ -47,7 +47,6 @@ pub fn compress(order: u5, rf: *fs.File, wf: *fs.File, size: u32, a: Allocator) 
 
 pub fn decompress(order: u5, rf: *fs.File, wf: *fs.File, a: Allocator) !void {
 
-//    var buf: [1]u8 = .{0};
     var size: u32 = 0;
     var k: isize = 0;
     var j: isize = 0;

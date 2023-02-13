@@ -29,6 +29,7 @@ pub const Writer = struct {
     pub fn flush(self: *Writer) !void {
         if (self.bcnt > 0) {
             _ = try self.file.write(self.buff[0..self.bcnt]);
+            self.bcnt = 0;
         }
     }
 };
