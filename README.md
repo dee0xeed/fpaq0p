@@ -10,6 +10,25 @@ See also [here](https://ziggit.dev/t/strange-program-performance-dependence/525)
 # fpaq0p
 An implementation of [fpaq0p](http://nishi.dreamhosters.com/u/fpaq0p.cpp) entropy encoder in Zig.
 
+## performance
+
+### original c++ version (with -O3 g++ option)
+$ time ./fpaq0p c ~/CC/enwik8 zz
+enwik8 (100000000 bytes) -> zz (61457810 bytes) in 10.98 s.
+
+real    0m11,093s
+user    0m10,831s
+sys 0m0,172s
+
+### zig
+
+$ time ./fpaq0p c ~/CC/enwik8 zz
+enwik8 (100000000 bytes) -> zz (61457810 bytes) in 8890 msec
+
+real    0m8,893s
+user    0m8,753s
+sys 0m0,136s
+
 ## links
 [PAQ](http://mattmahoney.net/dc/)
 

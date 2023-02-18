@@ -2,7 +2,6 @@
 const std = @import("std");
 const os = std.os;
 const fs = std.fs;
-//const io = std.io;
 const mem = std.mem;
 const Allocator = mem.Allocator;
 const Model = @import("bswi-model.zig").Model;

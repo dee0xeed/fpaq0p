@@ -321,13 +321,24 @@ fn compress(rf: *fs.File, wf: *fs.File, size: u32, a: Allocator) !void {
     try writer.take(buf[2]);
     try writer.take(buf[3]);
 
+      // LSB -> MSB
+//    while (k < size) : (k += 1) {
+//        var byte = try reader.give() orelse unreachable;
+//        var j: u8 = 0;
+//        while (j < 8) : (j += 1) {
+//            var bit = @intCast(u1, byte & 0b0000_0001);
+//            try encoder.take(bit);
+//            byte >>= 1;
+//        }
+//    }
+
+    // MSB -> LSB
     while (k < size) : (k += 1) {
         var byte = try reader.give() orelse unreachable;
         var j: u8 = 0;
         while (j < 8) : (j += 1) {
-            var bit = @intCast(u1, byte & 0b0000_0001);
+            var bit = @intCast(u1, (byte >> (7 - @intCast(u3, j))) & 0x01);
             try encoder.take(bit);
-            byte >>= 1;
         }
     }
     try encoder.foldup();
@@ -353,19 +364,33 @@ pub fn decompress(rf: *fs.File, wf: *fs.File, a: Allocator) !void {
     var m = try Model.init(a);
     var decoder = try Decoder.init(&m, rf, &reader);
 
+    // LSB -> MSB
+//    var bit: u1 = 0;
+//    var bbb: u8 = 0;
+//    while (k < size) : (k += 1) {
+//        j = 0;
+//        byte = 0;
+//        while (j < 8) : (j += 1) {
+//            bit = try decoder.give();
+//            bbb = bit;
+//            bbb <<= 7;
+//            byte = (byte >> 1) | bbb;
+//        }
+//        _ = try writer.take(byte);
+//    }
+
+    // MSB -> LSB
     var bit: u1 = 0;
-    var bbb: u8 = 0;
     while (k < size) : (k += 1) {
         j = 0;
         byte = 0;
         while (j < 8) : (j += 1) {
             bit = try decoder.give();
-            bbb = bit;
-            bbb <<= 7;
-            byte = (byte >> 1) | bbb;
+            byte = (byte << 1) | bit;
         }
         _ = try writer.take(byte);
     }
+
     try writer.flush();
 }
 

@@ -2,7 +2,6 @@
 const std = @import("std");
 const os = std.os;
 const fs = std.fs;
-const io = std.io;
 
 const Model = @import("bswi-model.zig").Model;
 const Reader = @import("buff-reader.zig").Reader;
